@@ -1,0 +1,491 @@
+--- PROMPT ---
+arXiv:1808.03724v1  [cs.SE]  10 Aug 2018
+COBOL to Java and Newspapers Still Get Delivered
+Alessandro De Marco
+The New Y ork Times Company
+New Y ork, NY , USA
+alex.demarco@nytimes.com
+V alentin Iancu
+Modern Systems International Ltd.
+Bucharest, Romania
+viancu@modernsystems.com
+Ira Asinofsky
+The New Y ork Times Company (Retired)
+New Y ork, NY , USA
+irabevasi@aol.com
+©2018 IEEE. Personal use of this material is permitted. Perm ission from IEEE must be obtained for all other uses, in any cu rrent or future media, including
+reprinting/republishing this material for advertising or promotional purposes, creating new collective works, for r esale or redistribution to servers or lists, or
+reuse of any copyrighted component of this work in other work s. Accepted to be Published in: Proceedings of the 2018 IEEE I nternational Conference on
+Software Maintenance and Evolution (ICSME), September 23- 29, 2018, Madrid, Spain.
+Abstract—This paper is an experience report on migrating
+an American newspaper company’s business-critical IBM mai n-
+frame application to Linux servers by automatically transl ating
+the application’s source code from COBOL to Java and con-
+verting the mainframe data store from VSAM KSDS ﬁles to
+an Oracle relational database. The mainframe application h ad
+supported daily home delivery of the newspaper since 1979. I t
+was in need of modernization in order to increase interopera bility
+and enable future convergence with newer enterprise system s
+as well as to reduce operating costs. T esting the modernized
+application proved to be the most vexing area of work. This
+paper explains the process that was employed to test functio nal
+equivalence between the legacy and modernized application s, the
+main testing challenges, and lessons learned after having o perated
+and maintained the modernized application in production ov er
+the last eight months. The goal of delivering a functionally
+equivalent system was achieved, but problems remained to be
+solved related to new feature development, business domain
+knowledge transfer , and recruiting new software engineers to
+work on the modernized application.
+Index T erms—Software testing, Mainframe, COBOL, Java,
+Software application migration, Code translation
+I. I N T RO D U CT IO N
+Since 1979, this American news media company relied
+on a software application running on its mainframe as the
+core IT system supporting daily home delivery of its news-
+paper. The application had grown to more than two mil-
+lion lines of COBOL code implementing billing, customer
+account maintenance, delivery routing, and other business -
+critical functionality. As a legacy system, it “represent[ ed]
+years of accumulated experience and knowledge” [1], while
+it “signiﬁcantly resist[ed] modiﬁcation and evolution” [2 ]. It
+was also very expensive to operate in comparison to more
+modern systems at the company.
+An attempt to redevelop the home delivery application be-
+tween 2006 and 2009 failed. In 2015, with mounting pressure
+to quickly lower costs, a different modernization approach was
+selected. Instead of redeveloping the application from scr atch,
+the aim was to migrate the application off the mainframe
+and onto Linux servers by using a code and data translation
+approach. This approach promised to deliver an application
+that would be functionally equivalent, cheaper to operate, and
+easier to integrate with in comparison to the original. An
+evaluation of alternate approaches determined that a secon d
+attempt at redeveloping the application would have been muc h
+more expensive, and rehosting [3] would have continued to
+lock-up data in proprietary technology.
+A vendor provided the technology to convert the code
+and data [4]. Based on an early proof-of-concept trial of the
+vendor’s technology, it became clear that even though the
+translated software could work as expected it would likely
+be more costly to maintain and enhance than handcrafted
+Java software. It would also require knowledge of COBOL
+programming idioms and mainframe concepts that most Java
+software engineers would not possess. Despite the disadvan -
+tages, at an estimated cost of less than a tenth of the 2006-20 09
+redevelopment initiative and with a projected timeline of j ust
+one year, senior IT management opted to move forward.
+As the project team leaders, we report on what went well,
+what did not, and lessons learned. Even though the modernize d
+application went live a year later than originally planned, this
+is a success story.
+There are known challenges inherent in legacy code transla-
+tion [5]. However, in our project, testing the application p roved
+to be the most time-consuming, difﬁcult, and underestimate d
+area of work. Unexpected testing obstacles caused signiﬁca nt
+delays. Development of an elaborate testing process was
+required in order to test functional equivalence between th e
+legacy application and the modernized application, as the
+terms are deﬁned in [6], while supporting some functionalit y
+changes and feature enhancements along the way.
+The main contributions of this paper are:
+1) Our process to test functional equivalence between the
+legacy and modernized applications.
+2) The obstacles that we encountered while testing the
+modernized application.
+3) Issues encountered in production due to gaps in the
+testing process and other lessons learned.
+In II, we describe our migration methodology. In III, we
+explain our testing process. In IV, we cover the main chal-
+lenges encountered in the testing process, production issu es,
+and lessons learned. W e conclude in V.
+II. M IG RAT IO N ME T H O D O L O G Y
+A. An 8-Step Process
+W e employed an 8-Step process to migrate our application
+off the mainframe and onto Linux servers. The steps are liste d
+below . For a detailed explanation of the steps, refer to [4].
+Step 1: Collect Inventory in the Legacy System
+Step 2: Break down into W ork Packets
+Step 3: Database Remodelling
+Step 4: Data Migration
+Step 5: Code / JCL Conversion
+Step 6: T esting
+Step 7: User Acceptance T esting
+Step 8: CutoverW ork Packets are deﬁned as one or more component groups
+of the application that could be translated and tested toget her.
+For each W ork Packet, we executed Steps 3-6. Once all W ork
+Packets had been converted and tested, we executed Steps 7
+and 8.
+B. T echnology Conversion Mapping Summary
+A high-level technology conversion mapping is provided
+in the table below . A detailed explanation of the vendor’s
+translation technology (i.e. ﬁrst 4 rows) is available in [4 ].
+T echnology Legacy Modernized
+Programming
+Language
+COBOL Java
+Database VSAM KSDS
+ﬁles
+Relational Database (Oracle)
+Batch Jobs JCL Spring Batch XML (JSR-352)
+User Interface
+Screens
+BMS Maps JSF , HTML/CSS, Javascript;
+accessible via a W eb Browser
+Security and Ac-
+cess Control
+RACF Spring Security and Active Di-
+rectory
+Middleware CICS Jetty, Apache-CXF ,
+JP A/Eclipselink
+Reporting QMF and
+DB2
+Jasper Reports and Oracle
+Encryption Megacryption Java Cryptography Extension
+Screen Automa-
+tion / Macros
+IBM HA TS Newly developed W eb Services
+Batch Process
+Scheduler
+CA7 Control-M
+Monitoring and
+Alerting
+RMF , SMF ,
+Omegamon
+NewRelic, nagios, Sumologic
+Development and
+Deployment
+Changeman git, gradle, jenkins, puppet, an-
+sible
+C. Framework Support F or Utilities and Middleware Services
+In addition to translating the code and data, the vendor
+provided a runtime framework that implemented many main-
+frame services and utilities. This allowed the translated c ode to
+run on the modernized platform while continuing to interfac e
+with its environment in a similar way to how it did on the
+mainframe. This approach was also used in [7].
+D. New Component Development
+When legacy application dependencies were not supported
+by the runtime framework (e.g. REXX, GVEXPOR T), if an
+off-the-shelf software package was not available as a subst i-
+tute, or if it made more sense to make use of capabilities of
+the new environment (e.g. Oracle database backups and resto re
+points; ﬁle system snapshots), then replacement component s
+were developed. In addition, since automatically converti ng
+the CA7 batch schedule for Control-M was unsuccessful, we
+redeveloped the batch job schedule for Control-M.
+III. T E S T IN G PRO CE S S
+T o assure that the modernized application would be func-
+tionally equivalent to the legacy application, we developed
+the testing process described next. By functional equivale nce
+we mean that the modernized application would produce the
+same output as the legacy application given the same input. A s
+the translation from COBOL to Java preserved business rules
+and much of the internal component hierarchy of the legacy
+application, we were able to test functional equivalence at the
+component group level ﬁrst, and gradually build up to testin g
+functional equivalence of the whole application.
+A. Black-Box T esting of Component Groups
+Component groups assembled related components that
+would be runnable and testable together as a “black-box”
+through existing externally accessible interfaces, such a s
+SOAP W eb Services, User Interface screens, database tables ,
+and ﬁles. Given the same inputs, the output of legacy compo-
+nent groups were compared to the output of their modernized
+counterparts. When they matched, the test was considered
+to have passed. When they did not, root-cause analysis was
+performed to ﬁnd the source of the mismatch.
+B. T est Environments
+A new test region was created on the mainframe to support
+the testing process. It served as the source of truth for expected
+behavior.
+QA analysts and developers installed a Linux virtual ma-
+chine and a database on their individual computers. This
+allowed everyone to test modernized components locally.
+Development, Staging, and Production environments were
+provisioned in a private datacenter. A shared Oracle databa se
+and a Control-M batch scheduler were conﬁgured in each.
+These environments let us build and test infrastructure and
+conﬁguration automation code, the full batch schedule, and
+infrastructure-related performance improvements, since these
+could not be tested on individual developer machines. Stati c
+test data was used in the Development environment, and
+dynamic current day test data was used in the Staging envi-
+ronment. T o generate current day test data, the batch proces s
+ran every day in the mainframe test region and output ﬁles
+were then transferred over. This enabled testing of scenari os
+that depended on the day of week or month, and it validated
+that one day’s batch output would be processed correctly the
+next day.
+C. Stages In the T esting Process
+The testing process, Step 6 of II-A, was broken down into
+stages, with each stage progressively increasing in scope a nd
+level of difﬁculty in isolating the root-cause of test failu res.
+The stages are summarized in the table below .
+Stage 1: Pre-Delivery
+D: T ests done by the translation technology vendor prior to
+delivering translated code.
+E: Individual developer machines.
+S: One batch job, one set of screens, or a W eb Service;
+automated testing of 10 batch jobs for regression testing.
+Stage 2: Data Migration V alidation
+D: T ests done by the QA analysts to make sure that data loaded
+into the database matched VSAM KSDS ﬁles.
+E: Individual QA analyst machines, and Development.
+S: All migrated data.Stage 3: Component Group
+D: T ests done by QA analysts to make sure that a component
+group worked as expected.
+E: Individual QA analyst machines, and, for W eb Services and
+UI screens, both Development and Staging.
+S: One batch job, one or more related UI screens, one SOAP
+W eb Service.
+Stage 4: Batch Process (Operating on Static T est Data)
+D: Automated tests for the end to end batch process. Also acted
+as a batch regression test system.
+E: Development
+S: The full batch, but conﬁgured to run the same day, everyday
+in order to simplify root-cause analysis.
+Stage 5: Batch Process (Operating on Dynamic T est Data)
+D: Automated tests for the end to end batch process.
+E: Mainframe test region and Staging, running in parallel.
+S: The full batch, but conﬁgured to compare current day output
+between the legacy and modernized processes.
+Stage 6: Batch Process (Operating on Full Production Data)
+D: Automated execution of the batch process in production to
+benchmark performance.
+E: Production (prior to cutover).
+S: The full batch, operating on production data.
+Stage 7: System Integration
+D: T ests done by QA analysts in collaboration with other
+teams/systems within the organization.
+E: Staging
+S: The whole enterprise system, with new transactions entered
+via client systems, processed by the batch, and ﬂowing to
+downstream consumers via reports and ﬁle feeds.
+D = Description, E = Environment, S = Scope
+IV . D IS CU S S IO N
+W e discuss the main obstacles encountered in the T esting
+Process deﬁned in III, types of production issues that were n ot
+caught in testing, and lessons learned.
+A. T esting Obstacles
+T esting accounted for approximately 70% to 80% of the
+time spent on the project. The project was completed a year
+later than expected due primarily to these obstacles. W e hav e
+grouped the obstacles into three areas.
+1) Initial State of the Legacy Application:
+a) Lack of T ests: The vast majority of legacy application
+components did not have a high enough level of test coverage
+to codify the required information for functional equivale nce
+testing. As a consequence, much time was spent trying to
+analyze inputs, outputs, and sometimes even the internal be -
+havior of components when tests failed and root-cause analy sis
+had to be performed. This was especially time-consuming and
+difﬁcult for the more complex batch jobs (i.e. many man-
+months of work).
+b) Lack of Batch Automation: The CA7 batch process
+scheduler had never been installed in the existing mainfram e
+test region. In order to test functional equivalence of the b atch
+process end-to-end, Control-M was installed and conﬁgured in
+a new test region as noted in III-B. This work was unplanned
+and required a great amount of effort.
+c) Obsolete Code: In operation for more than 35 years,
+the legacy application had accumulated a fair amount of
+obsolete code [8]. Due to a lack of adequate maintenance over
+the years, we spent time identifying this code and removing
+it to reduce the amount of translation and testing work to do.
+d) Interfaces with Other Systems: The legacy application
+generated more than 3500 data ﬁle feeds and reports for down-
+stream consumers daily. W e did not know all the consumers,
+many transfers used insecure protocols, and connections we re
+conﬁgured in a variety of different ways. Discovering the
+consumers, upgrading to secure protocols, and harmonizing
+conﬁguration management caused signiﬁcant delays.
+2) Data F ormats:
+a) EBCDIC Files That Contained Computational Fields:
+Many ﬁles on the mainframe contained a mix of display
+ﬁelds and computation ﬁelds. The mainframe environment
+has appropriate tools for working with these ﬁle formats,
+but the Linux platform does not. Files of this kind had to
+be transferred over because they were required for function al
+equivalence testing of batch jobs. When transferring these ﬁles
+off the mainframe, the display ﬁelds needed to be converted
+from EBCDIC to ASCII, but the computational ﬁelds (e.g.
+COMP3) had to remain binary-encoded. ETL software was
+developed for this which required additional development
+work, became a processing bottleneck, and was a source of
+errors. Handling the large volume of ﬁles and many versions
+of each further complicated the matter.
+b) File Processing T ools On Linux: A lack of tools
+to inspect, modify, and compare ﬁles with ﬁxed block or
+variable block structures and computational ﬁelds on the Li nux
+platform necessitated the development of new tools. This wo rk
+was not part of the original plan.
+3) Batch P erformance:
+a) Multi-layout VSAM KSDS Files: VSAM KSDS ﬁles
+with multiple record layouts (i.e. REDEFINEs) could be tran s-
+lated to one or many tables. W e obtained better performance
+when mapping to one table, but improved maintainability (i. e.
+fewer null-value columns) when mapping each layout to its
+own table. Since reading records in an indexed VSAM ﬁle
+often involved moving a pointer to an indexed location given
+a key, and then iteratively moving the pointer forward or
+backward to the next or previous record until some condition
+was met, when translated to one relational database table us ing
+a result set cursor as the pointer, this usually performed we ll.
+When translated to 97 tables, the worst case we encountered,
+this was painfully slow because open cursors had to be
+maintained on result sets from each of the 97 tables, and then
+data access logic decided which cursor would have the next
+or previous record.
+b) In-Memory VSAM Cache: When testing some batch
+jobs, we encountered performance problems that could not be
+solved by database remodelling as described previously. Th e
+technology vendor developed an in-memory representation o f
+VSAM KSDS ﬁles that acted like a cache. Encapsulated withindata access middleware and tuned with external conﬁguratio n
+settings, no application code needed to be changed. Once all
+necessary data had been loaded into memory, operations were
+performed against the in-memory data structure, and at the
+end of processing, changes were written back to the database .
+By performing these operations in-memory, network latency
+and database I/O bottlenecks were eliminated, but we could
+not run other batch jobs at the same time if they depended on
+the same database tables.
+B. T ypes of Issues That The T esting Process F ailed to Uncover
+Despite the heavy investment in testing, there were gaps
+in the testing process. After completing User Acceptance
+T esting and Cutover steps of II-A, we encountered problems
+in production due to the gaps. W e have grouped them by type
+with examples.
+a) Unexpected User Input: On the ﬁrst day of operation,
+a subscriber contacted our call center to complain about non -
+delivery of the newspaper over the prior 147 days. Complaint s
+over such a long time period are extremely uncommon. The
+algorithm to compute the credit due the subscriber involved
+a date computation that overﬂowed a ﬁeld that supported
+a maximum of 99 days. This overﬂow caused a runtime
+exception and a critical batch job failed. When attempting
+to reproduce this on the mainframe, we observed that the
+date value was simply truncated causing the calculation to
+be incorrect, but the job did not fail.
+b) Concurrency Issues: On another day, Control-M un-
+fortunately scheduled two batch jobs to run at the same time.
+They both wrote to the same output ﬁle which corrupted the
+data in that ﬁle. The corrupted data was later loaded into an
+in-memory VSAM cache (see IV -A3b) which caused a critical
+batch job to fail.
+c) Inefﬁcient Processing Idioms: Several batch jobs in-
+volved maintenance of data. On the mainframe, data main-
+tenance was often done by transferring VSAM data to ﬁles
+which would then be pruned and sorted using ﬁle processing
+tools. The cleaned up ﬁles would then be reloaded into VSAM
+and reindexed. The translation of these batch jobs resulted
+in operations (i.e. millions of DELETEs and INSER Ts) that
+locked up our database for hours on two different occasions
+causing online transaction processing outages. These main te-
+nance jobs were redeveloped to make use of more efﬁcient
+in-database maintenance operations or decommissioned alt o-
+gether.
+C. Lessons Learned
+a) Application Understanding: As noted in a 2013 Gart-
+ner Survey cited in [8], most modernization projects are de-
+livered later than originally planned “as a direct result of poor
+legacy application understanding”. The translation appro ach
+did not eliminate the need for us to develop a deep level
+of application understanding in critical parts of the syste m.
+W e could have developed this knowledge while improving the
+initial state of the application as a precursor project to th is
+one. This would likely have all
+
+--- OUTPUT ---
+### **Key Challenges in Testing the Legacy Application**  
+The project faced significant hurdles during the testing phase, categorized into three main areas: **initial state of the legacy application**, **data formats**, and **batch performance**. Each section highlights specific obstacles, examples, and lessons learned.
+
+---
+
+### **1. Initial State of the Legacy Application**  
+**Challenges:**  
+- **Lack of Tests:**  
+  - Most legacy components lacked sufficient test coverage, leading to manual analysis of inputs, outputs, and internal behavior.  
+  - Complex batch jobs (e.g., CA7) required months of work to debug, causing delays.  
+
+- **Batch Automation:**  
+  - The CA7 batch scheduler was not installed in the mainframe test region.  
+  - Control-M was manually configured in a new test region, requiring unplanned effort.  
+
+- **Obsolete Code:**  
+  - Over 35 years of use had accumulated outdated code.  
+  - Removing this code reduced translation and testing workload.  
+
+- **Interfaces with Other Systems:**  
+  - 3500+ daily data file feeds and reports to downstream systems.  
+  - Unknown consumers, insecure protocols, and varied configurations caused delays in upgrading protocols and harmonizing configurations.  
+
+---
+
+### **2. Data Formats**  
+**Challenges:**  
+- **EBCDIC to ASCII Conversion:**  
+  - Mainframe files (e.g., EBCDIC) required conversion to ASCII for Linux compatibility.  
+  - Computational fields (e.g., COMP3) needed to remain binary, requiring ETL tools and additional development.  
+  - Large volumes of files and versions added complexity.  
+
+- **Linux File Processing Tools:**  
+  - Lack of tools for inspecting/modify/var/block files forced the development of new tools.  
+  - These tools were not part of the original plan, leading to delays.  
+
+- **Batch Performance:**  
+  - **Multi-layout VSAM KSDS Files:**  
+    - Translating to multiple tables (e.g., 97 tables) caused performance issues due to open cursors and data access logic.  
+    - Mapping to a single table improved performance but increased maintenance complexity (fewer null-value columns).  
+
+  - **In-Memory VSAM Cache:**  
+    - Testing caused performance issues when batch jobs relied on shared database tables.  
+    - In-memory caching eliminated network latency but prevented parallel execution of other batch jobs.  
+
+---
+
+### **3. Batch Performance**  
+**Challenges:**  
+- **Multi-layout VSAM KSDS Files:**  
+  - Translating to multiple tables (e.g., 97 tables) led to slow operations due to open cursors and data access logic.  
+  - Redesigning to a single table improved performance but increased maintenance complexity.  
+
+- **In-Memory VSAM Cache:**  
+  - Testing caused performance issues when batch jobs relied on shared database tables.  
+  - In-memory caching eliminated latency but prevented parallel execution of other batch jobs.  
+
+---
+
+### **4. Types of Issues Not Caught in Testing**  
+**Examples:**  
+- **Unexpected User Input:**  
+  - A subscriber’s complaint about non-delivery over 147 days caused a date overflow error.  
+  - The job failed due to incorrect truncation, but the system did not log the error.  
+
+- **Concurrency Issues:**  
+  - Two batch jobs scheduled to run simultaneously wrote to the same output file, corrupting data.  
+  - The corrupted data was loaded into an in-memory VSAM cache, causing a critical failure.  
+
+- **Inefficient Processing Idioms:**  
+  - Maintenance operations (e.g., DELETE/INSERT) locked databases for hours, causing outages.  
+  - These jobs were redeveloped to use in-database operations or decommissioned.  
+
+---
+
+### **Lessons Learned**  
+1. **Application Understanding:**  
+   - Modernization projects often face delays due to poor legacy understanding.  
+   - Deep application knowledge was critical for redesigning maintenance workflows and optimizing performance.  
+
+2. **Testing as a Foundation:**  
+   - Testing is critical but must account for real-world constraints (e.g., EBCDIC conversions, concurrency, and legacy code).  
+   - Initial state improvements (e.g., testing and automation) reduced risks in later phases.  
+
+3. **Infrastructure and Tools:**  
+   - Legacy systems require careful migration of data formats and tools.  
+   - In-memory caching and performance bottlenecks must be addressed proactively.  
+
+---
+
+### **Conclusion**  
+The testing process revealed the complexities of legacy systems, including data format mismatches, performance bottlenecks, and concurrency challenges. Key lessons emphasize the importance of application understanding, robust testing, and infrastructure planning to minimize risks during modernization.

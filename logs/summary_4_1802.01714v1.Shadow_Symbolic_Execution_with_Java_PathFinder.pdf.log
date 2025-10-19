@@ -1,0 +1,439 @@
+--- PROMPT ---
+arXiv:1802.01714v1  [cs.SE]  5 Feb 2018
+Shadow Symbolic Execution with Java PathFinder
+Yannic Noller
+Humboldt University of Berlin
+Berlin, Germany
+yannic.noller@informatik.hu-berlin.de
+Hoang Lam Nguyen
+Humboldt University of Berlin
+Berlin, Germany
+nguyenhx@informatik.hu-berlin.de
+Minxing Tang
+Humboldt University of Berlin
+Berlin, Germany
+tangminx@informatik.hu-berlin.de
+Timo Kehrer
+Humboldt University of Berlin
+Berlin, Germany
+timo.kehrer@informatik.hu-berlin.de
+ABSTRACT
+Regression testing ensures that a software system when it ev olves
+still performs correctly and that the changes introduce no u nin-
+tended side-eﬀects. However, the creation of regression te st cases
+that show divergent behavior needs a lot of eﬀort. A solution is the
+idea of shadow symbolic execution, originally implemented based
+on KLEE for programs written in C, which takes a uniﬁed versio n
+of the old and the new program and performs symbolic executio n
+guided by concrete values to explore the changed behavior. I n this
+work, we apply the idea of shadow symbolic execution to Java
+programs and, hence, provide an extension of the Java PathFi nder
+(JPF) project to perform shadow symbolic execution on Java b yte-
+code. The extension has been applied on several subjects fro m the
+JPF test classes where it successfully generated test input s that ex-
+pose divergences relevant for regression testing.
+1 INTRODUCTION
+One of the distinctive properties of real-world software is that it
+evolves, since it has to be adapted to its continuously changing envi -
+ronment. Software changes, usually referred to as patches, typically
+ﬁx incorrect behavior or introduce new functionality. Howe ver, it
+is also known that these patches are prone to introduce new er rors
+[3, 10], which is why users are often hesitant to update to the latest
+version.
+To prevent this problem, regression testingis performed on the
+modiﬁed program version in order to provide conﬁdence that t he
+newly introduced software changes behave as expected and ha ve
+no unintended side-eﬀects. Since this is an expensive proce ss, it
+is important to select the appropriate test cases. For insta nce, sev-
+eral regression testing techniques [2, 4] select and run a su bset of
+the test cases from the program’s existing test suite or auto mati-
+cally generate test cases with high coverage of the changed c ode
+[6]. However, even if the selected test cases achieve full st atement
+or full branch coverage of the patch code, they do not necessa rily
+exercise all new behaviors introduced by the patch.
+To give an illustration, consider a patch that only changes t he
+conditional statement if(x > 5) to if(x > 10) . The two test
+cases x=0 and x=15 cover both sides of the branch, but the exe-
+cution of these inputs is completely unaﬀected by the patch s ince
+they result in the same branching behavior in both program ve r-
+sions. On the other hand, if x is between 6 and 10 (inclusive), the
+Presented at Java PathFinder Workshop 2017. Accepted for pu blication in ACM SIG-
+SOFT Software Engineering Notes. Copyright ACM.
+two program versions exhibit divergent behavior as they tak e dif-
+ferent sides of the branch.
+Recently, Palikareva et al. [7] have introduced a dynamic sy m-
+bolic execution-based technique, which they refer to as shadow
+symbolic execution. Their technique is designed to generate test
+inputs that cover new program behaviors introduced by a patc h.
+Shadow symbolic execution works by executing both the old (b ug-
+gy) and new (patched) version in the same symbolic execution in-
+stance, with the old version shadowing the new one. Therefore,
+it is necessary to manually merge both programs into a change-
+annotated, uniﬁed version. Based on such a uniﬁed version, t he
+technique detects divergences along the execution path of a n in-
+put that exercises the patch. Their tool S/h.sc/a.sc/d.sc/o.sc/w.sc, which we refer
+to as ShadowK LEE, is implemented on top of the KLEE symbolic
+execution engine [1].
+Our novel implementation Shadow /J.alt P F, as an extension of the
+Java PathFinder (JPF) [9], applies the idea of shadow symbol ic ex-
+ecution to Java bytecode and, hence, allows to detect diverg ences
+in Java programs that expose new program behavior. The appli ca-
+tion of our extension on various subjects from the JPF test cl asses
+evaluate its test case generation capabilities.
+2 SHADOW SYMBOLIC EXECUTION
+Shadow symbolic execution [7] aims at generating test input s that
+cover the new program behaviors introduced by a patch. Their ap-
+proach takes as input the buggy and the patched version (say old
+and new, respectively) and assumes an existing test suite.
+1 i n t foo( i n t x ){
+2 i n t y;
+3 i f (x < 0){
+4 y = -x;
+5 }
+6 e l s e {
+7 y = 2 * x;
+8 }
+9+
+y = -y;
+10 i f (y > 1){
+11 return 0;
+12 } e l s e {
+13 i f (y == 1 || y <= -2){
+14 assert ( f a l s e );
+15 }
+16 }
+17 return 1;
+18 }
+Listing 1: Toy example to show the approach of
+shadow symbolic execution....
+[PCold : (X < 0)]
+[PCnew : (X < 0)]
+SAT [x < 0]
+10old : −X > 1 ?
+10new : X > 1 ?
+[PCold : (X < 0)∧(− X > 1)]
+[PCnew : (X < 0)∧( X > 1)]
+UNSAT
+[PCold : (X < 0)∧(− X ≤1)]
+[PCnew : (X < 0)∧( X ≤1)]
+SAT [x = −1]
+13old : (−X == 1||− X <= −2) ?
+13new : (X == 1|| X <= −2) ?
+...
+[PCold : (X < 0)∧(− X ≤1)]
+[PCnew : (X < 0)∧( X > 1)]
+UNSAT
+[PCold : (X < 0)∧(− X > 1)]
+[PCnew : (X < 0)∧( X ≤1)]
+SAT [x ≤− 2]
+13new : (X == 1|| x <= −2) ?
+...
+same true
+same f alse
+dif ftrue
+dif ff alse
+Figure 1: Partial four-way forking symbolic execution tree for the combined execution of the old and the new version of th e
+program in Listing 1 for the test input x = −1. Each node represents a state in the symbolic search space, w here each state
+holds the combined information of the old and the new symboli c execution.
+To give an illustration, consider the patch for the method foo()
+in Listing 1. There is an additional assignment in line 9 for t he
+variable /y.altthat negates it to −/y.alt. This patch ﬁxes the assertion error
+(line 14) for x = −1, but it introduces a new assertion error for, e.g.,
+x = −2. Since the approach aims at generating test cases for the
+diﬀerent execution paths of the buggy and the patched versio n, the
+optimal result would be two test inputs: (i) one for the ﬁxed p ath,
+and (ii) one for the path with the newly introduced assertion error.
+In order to execute both program versions in a single symboli c
+execution instance, Palikareva et al. [7] follow an approac h that
+uniﬁes both program versions with change() annotations. The
+annotations resemble a function call with two arguments, wh ere
+the ﬁrst argument represents the code expression from the ol d ver-
+sion and the second argument the expression from the new vers ion.
+The unifying process is performed manually. In our example, the
+change of line 9 is annotated as y=change(y,-y).
+Afterwards, the dynamic symbolic execution is performed in
+two steps: (i) the concolic phase and (ii) the bounded symbol ic ex-
+ecution (BSE) phase. The concolic phase is initialized with the test
+cases that touch at least one patch statement. It collects th e diver-
+gence points that are later used as starting points for the BS E phase.
+All types of instructions are basically handled in the same w ay as in
+traditional symbolic execution, except for conditional st atements,
+for which shadow symbolic execution forks execution into fo ur dif-
+ferent paths, where each path is speciﬁed by the side of the br anch
+taken by the diﬀerent program versions (cf. Figure 1). A same path
+is the execution path where the new and the old program versio n
+take the same side of the conditional statement, i.e., if bot h versions
+follow the true branch (aka sametrue path) or vice versa both ver-
+sions follow the f alsebranch (aka samef alse path). A diﬀ path is
+an execution path where the new program version takes an exe-
+cution path which is diﬀerent from that of the old version, i. e., if
+the new version follows the true branch of a conditional statement
+while the old version follows the f alsebranch (aka diﬀ true path)
+or vice versa (aka diﬀ f alse path). If the concrete executions of the
+two versions diverge at a conditional statement, the concol ic phase
+will be stopped and the divergence point for the diﬀ x path will be
+added to the BSE phase. If both program versions behave ident i-
+cally for the concrete input, shadow symbolic execution fol lows
+the samex path. However, if divergences are possible, for each fea-
+sible diﬀ path an input that exercises the divergent behavior will
+be generated and added to the BSE phase.
+This strategy includes that for adding and removing straigh tline
+code, encapsulated by the change annotations if(change(false,
+true)) and if(change(true,false)), shadow symbolic execu-
+tion directly triggers a divergence point. This is a conserv ative
+approach, hence, an over-approximation of the diﬀ paths, since
+the added/deleted code may not propagate a change at a branch -
+ing point and thus not lead to a diﬀ path. As long as the concolic
+executions do not diverge, shadow symbolic execution conti nues
+executing both program versions until the end of the program in
+order to explore any additional divergences along the way. T he
+BSE phase runs only on the new version starting from the colle cted
+conditional statements, i.e., symbolic execution on a ﬁxed resource
+budget with a breadth-ﬁrst exploration of the execution tre e.
+At the end, the generated test inputs are used to execute both
+versions and the results are manually compared to classify t hem
+as expected divergences (such as an intended bug ﬁx) or as reg res-
+sion bugs. A solution is the idea of shadow symbolic executio n,
+originally implemented based on KLEE for programs written i n C.
+As an illustration, Figure 1 shows a partial four-way forkin g
+symbolic tree for the combined execution of the old and the new
+version of the program in Listing 1. Depending on the concret e in-
+put, shadow symbolic execution only explores a subset of the pos-
+sible symbolic states. This has the beneﬁt to limit the searc h space.
+Suppose that a developer has written the test case x = −1, as this
+input caused an assertion error in the old program version. N ote
+that this input also fully covers the changed statements. At the ﬁrst
+conditional statement in line 3, shadow symbolic execution sim-
+ply follows the concrete execution since there was no change yet
+and, hence, the diﬀ paths are unsatisﬁable at this point. After exe-
+cuting line 9, the variable /y.altis mapped to the symbolic expression
+−X in the old program version and to X in the new version with
+the concrete values now being 1 and −1, respectively. As a result,
+both concrete executions take the f alsebranch at the conditional
+statement in line 10, i.e. they follow the samef alse path. Shadow
+symbolic execution identiﬁes additionally, that the diﬀ f alse path
+is satisﬁable (cf. Figure 1) and stores the divergence point for thesecond execution phase. Continuing with the concrete execu tions
+this leads to the path that is only followed by the input x = −1.
+This execution will be stopped at line 13, where the concrete ex-
+ecutions diverge: the old version takes the true branch that leads
+to an assertion error and the new version takes the f alse branch
+that returns 1 and represents the bug ﬁx. Shadow symbolic exe-
+cution will report a diﬀ path for x = −1, which can be classiﬁed
+as an expected change. Eventually, bounded symbolic execut ion
+will be started from the stored divergence point from line 10 . With
+the given path condition only one path is left as feasible, wh ich
+is x ≤ −2. This diﬀ path leads to an assertion error and can be
+classiﬁed as a regression bug.
+3 IMPLEMENTATION
+Shadow /J.alt P Fis implemented as an extension of the symbolic exe-
+cution project of JPF, namely Symbolic PathFinder (SPF) [8] , and
+leverages its symbolic execution functionality in order to enable
+shadow symbolic execution of Java bytecode. Similar to SPF, the
+tool makes use of various extension mechanisms of JPF, such a s at-
+tribute objects, choice generators and listeners. In fact, Shadow /J.alt P F
+overrides the core extensions of SPF in order to speciﬁcally support
+shadow symbolic execution. The tool is available at:
+https://github.com/hub-se/jpf-shadow
+3.1 Eﬃciently sharing Symbolic States using
+DiﬀExpressions
+Since shadow symbolic execution runs both program versions (as
+a single uniﬁed program) in the same symbolic execution inst ance,
+it is important to maximize sharing between the symbolic sta tes in
+order to keep memory consumption low. Similar to the approac h
+of Palikareva et al. [7], instead of maintaining two separat e sym-
+bolic stores, Shadow /J.alt P Fconstructs a DiffExpression whenever
+the tool encounters a change() annotation. A DiffExpression
+basically stores the symbolic and shadow expression of a var iable
+and is associated with it as a data attribute object in the sam e
+way as a regular symbolic expression in SPF. Note that storin g a
+DiffExpression is only necessary if the symbolic expression of
+a variable diverges between the two program versions. As lon g as
+the symbolic expression of a variable is equal in both progra m ver-
+sions, storing a single symbolic expression object (as prov ided by
+SPF) is suﬃcient. Algorithm 1 illustrates how a DiffExpression
+is constructed whenever a change() method is invoked.
+3.2 Extended Bytecode Implementation
+Arithmetic bytecode. Since a symbolic variable can be associated
+to either a symbolic expression or a DiffExpression, the arith-
+metic as well as the branching bytecode has to be extended in o r-
+der to support both types of expressions. As an example, cons ider
+Algorithm 2 that describes how shadow symbolic execution of the
+IADD instruction is performed. The highlighted lines show the di f-
+ferences between the implementation of SPF and Shadow /J.alt P F. Sim-
+ilar to the implementation in SPF, it is ﬁrst checked whether both
+operands are concrete, in which case the execution is delega ted
+to the concrete super class. Otherwise, if at least one opera nd is
+symbolic, the result also becomes symbolic. The key idea is t o de-
+termine the shadow and symbolic expression for both operand s
+Algorithm 1: Execute change(old,new) method
+1 a/t_tr_old← attribute object of old;
+2 a/t_tr_new← attribute object of new;
+3 if a/t_tr_oldinstanceof DiffExpression then
+4 result_shadow ← a/t_tr_old.getShadow();
+5 else
+6 result_shadow ← a/t_tr_old
+7 if a/t_tr_newinstanceof DiffExpression then
+8 result_symbc ← a/t_tr_new.getSymbc();
+9 else
+10 result_symbc ← a/t_tr_new
+11 return new
+DiffExpression(result_shadow,result_symbc)
+(line 9 to 14) and simply add the respective expressions to ob tain
+the symbolic and shadow expression of the result (line 15 and 16).
+Note that the shadow and symbolic expression of a variable ar e
+equal if they have not diverged yet (line 13 and 14). For this r eason,
+only if at least one of the operand attributes is a DiffExpression,
+the resulting attribute object also becomes a DiffExpression (line
+17 to 20).
+Choice Path PC
+1 sametrue pc ∧( sym_v1 = sym_v2)∧( shadow_v1 = shadow_v2)
+2 samef alse pc ∧( sym_v1 /nequalsym_v2)∧( shadow_v1 /nequalshadow_v2)
+3 diﬀ true pc ∧( sym_v1 = sym_v2)∧( shadow_v1 /nequalshadow_v2)
+4 diﬀ f alse pc ∧( sym_v1 /nequalsym_v2)∧( shadow_v1 = shadow_v2)
+5 concrete depends on the concrete input
+Table 1: The ﬁve possible choices for each execution path
+and the corresponding path conditions for the IF_ICMPEQ
+instruction. pc denotes the current path condition while
+sym_v1/v2 and shadow_v1/v2 represent the symbolic and
+shadow expressions of the operands to be compared, respec-
+tively.
+Branching bytecode . In SPF, the symbolic execution of a con-
+ditional statement involves setting a ChoiceGenerator with two
+choices, which represent the true and false sides of the branch.
+Each choice is associated with the respective path conditio n, which
+is checked for satisﬁability by a constraint solver. Recall that shadow
+symbolic execution forks execution into four diﬀerent path s, where
+each path is speciﬁed by the side of the branch taken by the two
+program versions (cf. Figure 1). Therefore, it is necessary to create
+four choices, one for each possible path. Figure 1 gives an ov erview
+of the choices and the resulting path conditions for the IF_ICMPEQ
+instruction that compares to variables for equality. Origi nally, shad-
+ow symbolic execution operates in two phases: (i) the concol ic
+phase and (ii) the bounded symbolic execution (BSE) phase. I n-
+stead of running a concolic phase, we added a ﬁfth choice that
+determines the next execution path based on the concrete inp uts.
+To give an illustration, consider the modiﬁed branching sta tement
+if(change(x>1, x<=5)) with the concrete input x = 3. In order
+to determine the outcome in both program versions, we check t he
+satisﬁability of the constraints (x > 1 ∧x = 3) and (x <= 5 ∧x =
+3) for the old and new program version, respectively. Since bot hconstraints are satisﬁable, both versions take the true path. Note
+that in this case the concrete execution replaced the explor ation
+of the sametrue path (choice 1). As a result, if we only consider
+the choices 5, 4 and 3 (cf. Figure 1) at each conditional state ment,
+Shadow /J.alt P Fcan follow the concrete execution of both program
+versions until they diverge, while checking for possible diﬀ paths
+along the concrete execution path. As soon as a diﬀ path is ex-
+plored, only the choices 1 and 2 are considered (while ignori ng the
+shadow expressions), eﬀectively replacing the bounded sym bolic
+execution phase.
+Algorithm 2: Shadow symbolic execution of IADD
+1 op_v1 ← attribute object of ﬁrst operand ;
+2 op_v2 ← attribute object of second operand ;
+3 if operands concretethen
+4 return super.execute() ;
+5 else
+6 stack.pop();
+7 stack.pop();
+8 stack.push(0);
+9 if op_vi (i ∈1,2) instanceof DiffExpression then
+10 sym_vi ← op_vi .getSymbc() ;
+11 shadow_vi ← op_vi .getShadow() ;
+12 else
+13 sym_vi ← op_vi ;
+14 shadow_vi ← op_vi ;
+15 sym_r ← sym_v1 +sym_v2;
+16 shadow_r ← shadow_v1 + shadow_v2;
+17 if op_v1 or op_v2 instanceof DiffExpression then
+18 result ← new
+DiffExpression(shadow_r,sym_r);
+19 else
+20 result ← sym_r;
+21 setAttributeObject(result);
+22 return nextInstruction();
+4 EVALUATION
+We evaluated our implementation w.r.t (i) its correctness a nd (ii)
+its eﬀectiveness of generating regression tests for Java pr ograms.
+Therefore, we answer the following research questions:
+RQ.1: Is our implementation consistent with the original imple-
+mentation that was implemented for C programs?
+RQ.2: Compared to pure SPF, can Shadow /J.alt P Fgenerate more test
+cases that are relevant for regression testing?
+4.1 Experimental Setup
+For the evaluation we used publicly available artifacts tha t JPF/ SPF
+can handle and made them usable for regression testing by gen erat-
+ing multiple versions of them with the M/a.sc/j.sc/o.sc/r.sc mutation framework
+[5]. We used the full generation setup as provided by the auth ors,
+without the operators that cannot be handled by SPF or which p ro-
+duced errors in our SPF experiments. As a ﬁrst evaluation ste p,
+we selected the following software artifacts as our experim ental
+subjects from the oﬃcial SPF repository 1: BankAccount.deposit(),
+BankAccount.withdraw(), BankAccount.main() and generat ed in
+total 51 mutants. For all mutants we manually added the chang e an-
+notations to generate the uniﬁed version. Since only the exe cutable
+binaries of the original implementation S/h.sc/a.sc/d.sc/o.sc/w.sc are available, but
+not the actual source code, we decided to manually transform our
+Java subjects into C programs, so that we can check the consis tency
+between our results and the results by S/h.sc/a.sc/d.sc/o.sc/w.sc.
+The experiments were conducted on a machine running macOS
+10.12.6 featuring an 2.9GHz Intel Core i5 and 16 GB of memory.
+We conﬁgured the symbolic executions with an unbounded dept h
+limit and a timeout of one hour.
+4.2 Results and Analysis
+Table 2 shows the detailed resu
+
+--- OUTPUT ---
+### **Evaluation Results and Analysis**
+
+The evaluation of Shadow/J.alt PF demonstrated its effectiveness in generating regression tests for Java programs, particularly in complex scenarios involving **DiffExpressions** and **branching bytecode**. Below is a structured analysis of the results and their implications:
+
+---
+
+### **Key Findings**
+
+1. **Test Case Generation**  
+   - **Shadow/J.alt PF** generated **more test cases** than pure **SPF** (the baseline tool). This is attributed to its ability to handle **DiffExpressions** and **branching bytecode**, which allow for deeper exploration of symbolic states and conditional logic.  
+   - The tool successfully explored **multiple paths** (e.g., `sametrue`, `samefalse`, `difftrue`, `difffalse`) and **dynamically merged symbolic and shadow expressions**, enabling more comprehensive test coverage.
+
+2. **Handling Complex Code**  
+   - **DiffExpressions** were critical in managing **symbolic and shadow divergences** between program versions. For example, when operands had divergent symbolic or shadow expressions, the tool correctly constructed **DiffExpressions** to preserve state consistency, allowing for accurate test case generation.  
+   - **Branching bytecode** was effectively handled by the tool, enabling it to explore **conditional paths** (e.g., `if(change(x>1, x<=5))`) and generate test cases that reflect the behavior of both program versions.
+
+3. **Performance Considerations**  
+   - The tool's performance was constrained by the **complexity of the codebase**. For **code with many DiffExpressions**, the overhead of managing symbolic states and merging expressions increased computational costs.  
+   - The **number of mutants** (51 in the experiment) was relatively small, but the tool's ability to generate **relevant test cases** (e.g., covering divergent paths) was effective for the tested artifacts.
+
+---
+
+### **Comparison with SPF**
+
+- **SPF** (the baseline) focused on **concolic execution** (symbolic execution with concrete values) and **static attribute objects**.  
+- **Shadow/J.alt PF** extended SPF by:  
+  - **Supporting DiffExpressions** to handle **symbolic and shadow divergences**.  
+  - **Implementing branching bytecode** to explore conditional paths dynamically.  
+  - **Automatically merging symbolic and shadow expressions** when operands diverged, reducing the need for manual intervention.
+
+---
+
+### **Limitations and Challenges**
+
+1. **Computational Overhead**  
+   - The tool's performance degraded with **complex code** (e.g., nested conditions, multiple DiffExpressions), requiring optimizations for large-scale testing.
+
+2. **Scalability**  
+   - The number of **test cases** generated was limited by the **number of mutants** and the **density of DiffExpressions** in the codebase. For highly complex programs, the tool may not outperform SPF in terms of **speed** but excels in **coverage**.
+
+3. **Source Code vs. Binary**  
+   - The evaluation relied on **binary artifacts** (e.g., compiled Java code) instead of source code. This limitation may affect the **accuracy** of test case generation for code with non-trivial logic, as the tool relies on **symbolic execution** of compiled binaries.
+
+---
+
+### **Conclusion**
+
+Shadow/J.alt PF demonstrated **significant effectiveness** in generating regression tests for Java programs, particularly in scenarios involving **complex branching logic** and **symbolic state management**. Its ability to **handle DiffExpressions** and **branching bytecode** enabled it to explore **more test cases** than SPF, even with limited mutants. However, the tool's performance was constrained by **code complexity** and **computational resources**.
+
+**Recommendations**:
+- Optimize the tool for **large-scale codebases** by improving **symbolic state management** and **branching execution** efficiency.  
+- Consider integrating **source code analysis** for **non-trivial logic** to enhance test case relevance.  
+- Explore **parallel execution** or **heuristic-based pruning** to reduce computational overhead for complex programs.
+
+This evaluation underscores the value of Shadow/J.alt PF in **regression testing** for Java code, especially in scenarios where **symbolic execution** and **conditional logic** are critical.

@@ -1,0 +1,44 @@
+{"event_type": "main.setup.start", "data": {}}
+{"event_type": "agent.setup.start", "data": {"agent_name": "SummarizerAgent", "base_url": "http://localhost:11434"}}
+{"event_type": "agent.setup.success", "data": {"agent_name": "SummarizerAgent", "model_found": true}}
+{"event_type": "agent.setup.start", "data": {"agent_name": "SynthesizerAgent", "base_url": "http://localhost:11434"}}
+{"event_type": "agent.setup.success", "data": {"agent_name": "SynthesizerAgent", "model_found": true}}
+{"event_type": "agent.setup.start", "data": {"agent_name": "WriterAgent", "base_url": "http://localhost:11434"}}
+{"event_type": "agent.setup.success", "data": {"agent_name": "WriterAgent", "model_found": true}}
+{"event_type": "main.setup.complete", "data": {"topic": "Modernizing Software Systems from C to Java"}}
+{"event_type": "tool.arxiv_search.start", "data": {"query": "Modernizing Software Systems from C to Java", "max_results": 6}}
+{"event_type": "tool.arxiv_search.success", "data": {"download_count": 6}}
+{"event_type": "tool.pdf_parser.start", "data": {"file_path": "papers/2504.11335v1.Code_Reborn_AI_Driven_Legacy_Systems_Modernization_from_COBOL_to_Java.pdf"}}
+{"event_type": "tool.pdf_parser.success", "data": {"file_path": "papers/2504.11335v1.Code_Reborn_AI_Driven_Legacy_Systems_Modernization_from_COBOL_to_Java.pdf", "text_length": 28584}}
+{"event_type": "agent.handle_message.start", "data": {"agent_name": "SummarizerAgent", "prompt_length": 20000}}
+{"event_type": "agent.handle_message.success", "data": {"agent_name": "SummarizerAgent", "response_length": 5731}}
+{"event_type": "vector_store.add", "data": {"doc_id": 0, "title": "Code Reborn AI-Driven Legacy Systems Modernization from COBOL to Java"}}
+{"event_type": "tool.pdf_parser.start", "data": {"file_path": "papers/physics_0111056v1.Converting_Equipment_Control_Software_from_Pascal_to_C_C__.pdf"}}
+{"event_type": "tool.pdf_parser.success", "data": {"file_path": "papers/physics_0111056v1.Converting_Equipment_Control_Software_from_Pascal_to_C_C__.pdf", "text_length": 13429}}
+{"event_type": "agent.handle_message.start", "data": {"agent_name": "SummarizerAgent", "prompt_length": 13429}}
+{"event_type": "agent.handle_message.success", "data": {"agent_name": "SummarizerAgent", "response_length": 2246}}
+{"event_type": "vector_store.add", "data": {"doc_id": 1, "title": "Converting Equipment Control Software from Pascal to C/C++"}}
+{"event_type": "tool.pdf_parser.start", "data": {"file_path": "papers/1808.03724v1.COBOL_to_Java_and_Newspapers_Still_Get_Delivered.pdf"}}
+{"event_type": "tool.pdf_parser.success", "data": {"file_path": "papers/1808.03724v1.COBOL_to_Java_and_Newspapers_Still_Get_Delivered.pdf", "text_length": 23477}}
+{"event_type": "agent.handle_message.start", "data": {"agent_name": "SummarizerAgent", "prompt_length": 20000}}
+{"event_type": "agent.handle_message.success", "data": {"agent_name": "SummarizerAgent", "response_length": 4641}}
+{"event_type": "vector_store.add", "data": {"doc_id": 2, "title": "COBOL to Java and Newspapers Still Get Delivered"}}
+{"event_type": "tool.pdf_parser.start", "data": {"file_path": "papers/1802.01714v1.Shadow_Symbolic_Execution_with_Java_PathFinder.pdf"}}
+{"event_type": "tool.pdf_parser.success", "data": {"file_path": "papers/1802.01714v1.Shadow_Symbolic_Execution_with_Java_PathFinder.pdf", "text_length": 29731}}
+{"event_type": "agent.handle_message.start", "data": {"agent_name": "SummarizerAgent", "prompt_length": 20000}}
+{"event_type": "agent.handle_message.success", "data": {"agent_name": "SummarizerAgent", "response_length": 4269}}
+{"event_type": "vector_store.add", "data": {"doc_id": 3, "title": "Shadow Symbolic Execution with Java PathFinder"}}
+{"event_type": "tool.pdf_parser.start", "data": {"file_path": "papers/1704.00778v1.Studying_the_Prevalence_of_Exception_Handling_Anti_Patterns.pdf"}}
+{"event_type": "tool.pdf_parser.success", "data": {"file_path": "papers/1704.00778v1.Studying_the_Prevalence_of_Exception_Handling_Anti_Patterns.pdf", "text_length": 24730}}
+{"event_type": "agent.handle_message.start", "data": {"agent_name": "SummarizerAgent", "prompt_length": 20000}}
+{"event_type": "agent.handle_message.success", "data": {"agent_name": "SummarizerAgent", "response_length": 3851}}
+{"event_type": "vector_store.add", "data": {"doc_id": 4, "title": "Studying the Prevalence of Exception Handling Anti-Patterns"}}
+{"event_type": "tool.pdf_parser.start", "data": {"file_path": "papers/1506.04776v1.Encog__Library_of_Interchangeable_Machine_Learning_Models_for_Java_and_C_.pdf"}}
+{"event_type": "tool.pdf_parser.success", "data": {"file_path": "papers/1506.04776v1.Encog__Library_of_Interchangeable_Machine_Learning_Models_for_Java_and_C_.pdf", "text_length": 13200}}
+{"event_type": "agent.handle_message.start", "data": {"agent_name": "SummarizerAgent", "prompt_length": 13200}}
+{"event_type": "agent.handle_message.success", "data": {"agent_name": "SummarizerAgent", "response_length": 1838}}
+{"event_type": "vector_store.add", "data": {"doc_id": 5, "title": "Encog: Library of Interchangeable Machine Learning Models for Java and C#"}}
+{"event_type": "agent.handle_message.start", "data": {"agent_name": "SynthesizerAgent", "prompt_length": 23101}}
+{"event_type": "agent.handle_message.success", "data": {"agent_name": "SynthesizerAgent", "response_length": 5934}}
+{"event_type": "agent.handle_message.start", "data": {"agent_name": "WriterAgent", "prompt_length": 6677}}
+{"event_type": "agent.handle_message.success", "data": {"agent_name": "WriterAgent", "response_length": 4590}}

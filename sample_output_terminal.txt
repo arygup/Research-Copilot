@@ -1,0 +1,25 @@
+(my_env) aryan@aryans-MacBook-Air A3 TSE % python research_copilot.py
+Enter a research topic: Modernizing Software Systems from C to Java
+Enter number of research papers (integer around 5/6): 6
+
+ Step 1: Searching for papers on 'Modernizing Software Systems from C to Java'
+/Users/aryan/Desktop/A3 TSE/research_copilot.py:104: DeprecationWarning: The 'Search.results' method is deprecated, use 'Client.results' instead
+  for result in search.results():
+Downloaded 'Code Reborn AI-Driven Legacy Systems Modernization from COBOL to Java'
+Downloaded 'Converting Equipment Control Software from Pascal to C/C++'
+Downloaded 'COBOL to Java and Newspapers Still Get Delivered'
+Downloaded 'Shadow Symbolic Execution with Java PathFinder'
+Downloaded 'Studying the Prevalence of Exception Handling Anti-Patterns'
+Downloaded 'Encog: Library of Interchangeable Machine Learning Models for Java and C#'
+
+ Step 2: Parsing and summarizing papers
+ Processing 'Code Reborn AI-Driven Legacy Systems Modernization from COBOL to Java'
+ Processing 'Converting Equipment Control Software from Pascal to C/C++'
+ Processing 'COBOL to Java and Newspapers Still Get Delivered'
+ Processing 'Shadow Symbolic Execution with Java PathFinder'
+ Processing 'Studying the Prevalence of Exception Handling Anti-Patterns'
+ Processing 'Encog: Library of Interchangeable Machine Learning Models for Java and C#'
+
+ Step 3: Generating the final mini survey
+END, check report.md
+(my_env) aryan@aryans-MacBook-Air A3 TSE % 
